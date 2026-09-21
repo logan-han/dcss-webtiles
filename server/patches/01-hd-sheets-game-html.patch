@@ -1,0 +1,21 @@
+--- a/webserver/game_data/templates/game.html	2026-09-21 14:01:13
++++ b/webserver/game_data/templates/game.html	2026-09-21 14:13:41
+@@ -487,4 +487,18 @@
+   <img id="player" src="/gamedata/{{ version }}/player.png" />
+   <img id="icons" src="/gamedata/{{ version }}/icons.png" />
+   <img id="gui" src="/gamedata/{{ version }}/gui.png" />
++  <script>
++    // High-DPI screens get the 2x tile sheets (webserver/game_data/static/*-2x.png).
++    // cell_renderer.js reads data-sheet-scale when copying from the sheet.
++    (function () {
++      if (window.devicePixelRatio < 1.5) return;
++      var ids = ["floor", "wall", "feat", "main", "player", "icons", "gui"];
++      for (var i = 0; i < ids.length; i++) {
++        var img = document.getElementById(ids[i]);
++        if (!img) continue;
++        img.setAttribute("data-sheet-scale", "2");
++        img.src = img.src.replace(/\.png$/, "-2x.png");
++      }
++    })();
++  </script>
+ </div>

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+pilot/out/
+pilot/*.png
+tiles/source/
+.DS_Store
+models/
+pilot/out*/
+pilot/pixellab/
+data/

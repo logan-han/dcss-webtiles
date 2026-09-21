@@ -1,0 +1,16 @@
+--- a/webserver/game_data/static/cell_renderer.js	2026-09-21 14:01:13
++++ b/webserver/game_data/static/cell_renderer.js	2026-09-21 14:03:01
+@@ -1169,8 +1169,12 @@
+                                 - Math.floor(sy * img_yscale * ratio);
+ 
+             this.ctx.imageSmoothingEnabled = options.get("tile_filter_scaling");
++            // sheets may be served at 2x for high-DPI screens (see game.html)
++            const sheet_scale = Number(img.getAttribute("data-sheet-scale")) || 1;
+             this.ctx.drawImage(img,
+-                           info.sx, info.sy + sy - pos_sy_adjust, w, h,
++                           info.sx * sheet_scale,
++                           (info.sy + sy - pos_sy_adjust) * sheet_scale,
++                           w * sheet_scale, h * sheet_scale,
+                            x + Math.floor(total_x_offset * img_xscale * ratio),
+                            y + Math.floor(sy * img_yscale * ratio),
+                            scaled_w,

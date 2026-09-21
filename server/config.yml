@@ -1,0 +1,16 @@
+# Overrides for webserver/config.py (loaded by webtiles/config.py). Paths are inside the container.
+bind_address: ""
+bind_port: 8080
+dgl_mode: true
+password_db: /data/passwd.db3
+settings_db: /data/settings.db3
+server_socket_path: /data/sockets
+init_player_program: /crawl/init-player.sh
+game_data_no_cache: false
+max_connections: 100
+allow_anon_spectate: true
+enable_ttyrecs: false
+crypt_algorithm: "6"  # glibc crypt id: 6 = SHA-512
+login_token_lifetime: 30
+# lobby_url: https://crawl.example.com/
+dgl_status_file: /data/status

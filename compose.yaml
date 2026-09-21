@@ -1,0 +1,17 @@
+# Synology Container Manager project. Change the image tag, host port and volume path to taste.
+services:
+  dcss:
+    image: docker.io/loganhan123/dcss-webtiles:latest
+    container_name: dcss
+    ports:
+      - "8080:8080"
+    volumes:
+      - /volume1/docker/dcss/data:/data
+    # uid:gid that owns the volume on the NAS (DSM users are usually 1026+ in group 100)
+    user: "1026:100"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

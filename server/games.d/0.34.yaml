@@ -1,0 +1,28 @@
+# Game list for the webtiles lobby. %v = version, %n = player name.
+templates:
+  - id: default
+    version: "0.34"
+    crawl_binary: ./crawl
+    rcfile_path: /data/rcs
+    macro_path: /data/rcs
+    morgue_path: /data/morgue/%n
+    inprogress_path: /data/running
+    ttyrec_path: /data/ttyrecs/%n
+    socket_path: /data/sockets
+    dir_path: /data/saves
+    client_path: ./webserver/game_data/
+    show_save_info: true
+    allowed_with_hold: true
+
+games:
+  - id: dcss-web-0.34
+    name: Play %v
+  - id: seeded-web-0.34
+    name: Seeded %v
+    options: ["-seed"]
+  - id: sprint-web-0.34
+    name: Sprint %v
+    options: ["-sprint"]
+  - id: tut-web-0.34
+    name: Tutorial %v
+    options: ["-tutorial"]
