@@ -13,3 +13,12 @@ back it up with `rsync -a ubuntu@<ip>:/opt/dcss/data/ /volume1/docker/dcss-backu
 
 Idle reclamation: Oracle deletes Always Free instances that stay under 20% CPU/network/memory for 7 days.
 Upgrading the account to Pay As You Go keeps the same free limits and removes that rule.
+
+## Backups
+
+- In-cloud: `backup.sh` runs nightly (cron 18:17 UTC, 04:17 Melbourne) on the VM and puts a tarball of `/opt/dcss/data`
+  into the Always Free Object Storage bucket `crawl-backup` (namespace `axnnb2qvhvxc`), authenticated as the instance
+  (dynamic group `crawl-vm`, policy `crawl-backup`). A lifecycle rule deletes objects after 30 days.
+  Restore: `oci os object get -bn crawl-backup --name <file> --file x.tgz && tar xzf x.tgz -C /opt/dcss`.
+- Off-cloud: the NAS pulls a copy with a read-only rsync key (`rrsync -ro /opt/dcss/data`), e.g. from DSM Task
+  Scheduler as root: `rsync -a --delete -e "ssh -i /root/.ssh/crawl-backup -o IdentitiesOnly=yes" ubuntu@crawl.han.life:/ /volume1/docker/dcss-backup/`

@@ -4,8 +4,8 @@
 set -eu
 IP="$1"; DOMAIN=han.life; NAME="crawl.$DOMAIN"
 aws lightsail get-domain --region us-east-1 --domain-name "$DOMAIN" \
-  --query "domain.domainEntries[?name=='$NAME'].{name:name,target:target,type:type}" --output json |
-python3 -c 'import json,sys; [print(f"name={e[\"name\"]},target={e[\"target\"]},type={e[\"type\"]}") for e in json.load(sys.stdin)]' |
+  --query "domain.domainEntries[?name=='$NAME'].join('', ['name=', name, ',target=', target, ',type=', type])" --output text |
+tr '\t' '\n' | sed '/^$/d' |
 while read -r entry; do
   echo "removing $entry"
   aws lightsail delete-domain-entry --region us-east-1 --domain-name "$DOMAIN" --domain-entry "$entry" --query 'operation.status' --output text
