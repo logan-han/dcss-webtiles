@@ -1,0 +1,5 @@
+# Replace the hostname if you use another one. Caddy issues and renews the certificate.
+crawl.han.life {
+    encode zstd gzip
+    reverse_proxy dcss:8080
+}

@@ -1,0 +1,32 @@
+# Oracle Cloud (or any VM) deployment: the game container plus Caddy for automatic HTTPS.
+# Caddy answers on 80/443, gets the Let's Encrypt certificate itself and proxies WebSockets.
+services:
+  dcss:
+    image: loganhan123/dcss-webtiles:latest
+    container_name: dcss
+    restart: unless-stopped
+    # owner of ./data on the host (ubuntu user is 1000 on OCI Ubuntu images)
+    user: "1000:1000"
+    volumes:
+      - ./data:/data
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - dcss
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,59 @@
+#cloud-config
+# Paste into "Show advanced options > Management > Cloud-init script" when creating the OCI instance
+# (Ubuntu 24.04, Ampere A1). Also open TCP 80/443 and UDP 443 in the subnet's security list.
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-v2
+
+write_files:
+  - path: /opt/dcss/compose.yaml
+    permissions: "0644"
+    content: |
+      services:
+        dcss:
+          image: loganhan123/dcss-webtiles:latest
+          container_name: dcss
+          restart: unless-stopped
+          user: "1000:1000"
+          volumes:
+            - ./data:/data
+          expose:
+            - "8080"
+        caddy:
+          image: caddy:2
+          container_name: caddy
+          restart: unless-stopped
+          ports:
+            - "80:80"
+            - "443:443"
+            - "443:443/udp"
+          volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy_data:/data
+            - caddy_config:/config
+          depends_on:
+            - dcss
+      volumes:
+        caddy_data:
+        caddy_config:
+  - path: /opt/dcss/Caddyfile
+    permissions: "0644"
+    content: |
+      crawl.han.life {
+          encode zstd gzip
+          reverse_proxy dcss:8080
+      }
+
+runcmd:
+  # OCI Ubuntu images ship iptables rules that only allow SSH; open the web ports and persist them
+  - iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  - iptables -I INPUT -p udp --dport 443 -j ACCEPT
+  - netfilter-persistent save || true
+  - mkdir -p /opt/dcss/data
+  - chown -R 1000:1000 /opt/dcss/data
+  - usermod -aG docker ubuntu
+  - systemctl enable --now docker
+  - cd /opt/dcss && docker compose pull && docker compose up -d
