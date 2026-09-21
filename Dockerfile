@@ -20,7 +20,9 @@ WORKDIR /src/crawl/source
 # the Makefile shells out to git for the version string; the release tarball has none
 RUN printf '#!/bin/sh\ncase "$1" in describe) cat /src/crawl/source/util/release_ver ;; rev-parse) echo release ;; *) exit 1 ;; esac\n' \
       > /usr/local/bin/git && chmod +x /usr/local/bin/git
-RUN make -j"$(nproc)" WEBTILES=y USE_DGAMELAUNCH=y \
+# 0.34.1 Makefile typo ($(RLTILES)status-icon-sizes.h, no slash) makes this a parallel-make race; generate it first
+RUN python3 util/status-icon-sizes-gen.py rltiles/icon-sizes.txt \
+ && make -j"$(nproc)" WEBTILES=y USE_DGAMELAUNCH=y \
  && strip crawl && ls -la crawl webserver/game_data/static/*.png
 
 # ---------- hd: 2x tile sheets (xBR) for high-DPI screens ----------
