@@ -1,17 +1,15 @@
 #!/bin/sh
-# Point crawl.han.life at the VM: replaces whatever record exists (the CNAME to synology.me) with an A record.
+# Point crawl.han.life at the VM. han.life is hosted in Lightsail DNS (us-east-1), not Route 53.
 #   deploy/oci/dns.sh <public-ip>
 set -eu
-IP="$1"; NAME="crawl.han.life."
-ZONE=$(aws route53 list-hosted-zones-by-name --dns-name han.life --query 'HostedZones[0].Id' --output text | sed 's#/hostedzone/##')
-EXISTING=$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE" --query "ResourceRecordSets[?Name=='$NAME']" --output json)
-CHANGES=$(python3 - "$EXISTING" "$IP" "$NAME" <<'PY'
-import json, sys
-existing, ip, name = json.loads(sys.argv[1]), sys.argv[2], sys.argv[3]
-changes = [{"Action": "DELETE", "ResourceRecordSet": r} for r in existing]
-changes.append({"Action": "CREATE", "ResourceRecordSet": {"Name": name, "Type": "A", "TTL": 300, "ResourceRecords": [{"Value": ip}]}})
-print(json.dumps({"Comment": "crawl -> OCI", "Changes": changes}))
-PY
-)
-aws route53 change-resource-record-sets --hosted-zone-id "$ZONE" --change-batch "$CHANGES" --query 'ChangeInfo.Status' --output text
-echo "crawl.han.life -> $IP"
+IP="$1"; DOMAIN=han.life; NAME="crawl.$DOMAIN"
+aws lightsail get-domain --region us-east-1 --domain-name "$DOMAIN" \
+  --query "domain.domainEntries[?name=='$NAME'].{name:name,target:target,type:type}" --output json |
+python3 -c 'import json,sys; [print(f"name={e[\"name\"]},target={e[\"target\"]},type={e[\"type\"]}") for e in json.load(sys.stdin)]' |
+while read -r entry; do
+  echo "removing $entry"
+  aws lightsail delete-domain-entry --region us-east-1 --domain-name "$DOMAIN" --domain-entry "$entry" --query 'operation.status' --output text
+done
+aws lightsail create-domain-entry --region us-east-1 --domain-name "$DOMAIN" \
+  --domain-entry "name=$NAME,target=$IP,type=A" --query 'operation.status' --output text
+echo "$NAME -> $IP"

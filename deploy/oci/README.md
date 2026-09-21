@@ -3,7 +3,7 @@
 1. Create an Always Free instance: image Ubuntu 24.04 (aarch64), shape VM.Standard.A1.Flex, 2 OCPU / 12 GB
    (the current Always Free ceiling), your SSH key. Under Management paste `cloud-init.yaml`.
 2. Networking: in the VCN's default security list add ingress rules for TCP 80, TCP 443 and UDP 443 from 0.0.0.0/0.
-3. DNS: `deploy/oci/dns.sh <public-ip>` swaps the current CNAME for an A record (needs the local AWS login). Run it
+3. DNS: `deploy/oci/dns.sh <public-ip>` creates the A record in Lightsail DNS (needs the local AWS login). Run it
    before the first start, or `docker compose restart caddy` afterwards so Caddy can pass the certificate challenge.
 4. Check: `ssh ubuntu@<ip> 'cd /opt/dcss && docker compose ps && docker compose logs --tail 20'`, then open
    https://crawl.han.life and register the first account.
