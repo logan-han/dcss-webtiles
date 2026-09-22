@@ -41,15 +41,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # provenance, the logged metadata file and the build record artifact all embed the push event
+      # payload, which includes the pusher's account email
       - id: build
         uses: docker/build-push-action@v6
+        env:
+          BUILDX_METADATA_PROVENANCE: disabled
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
-          # provenance embeds the push event payload, including the pusher's account email
           provenance: false
       - run: |
           mkdir -p /tmp/digests
