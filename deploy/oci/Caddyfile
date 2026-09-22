@@ -1,5 +1,8 @@
 # Replace the hostname if you use another one. Caddy issues and renews the certificate.
 crawl.han.life {
     encode zstd gzip
-    reverse_proxy dcss:8080
+    reverse_proxy dcss:8080 {
+        # overwrite any client-sent value; webtiles trusts it with HTTP_XHEADERS=true
+        header_up X-Real-IP {remote_host}
+    }
 }

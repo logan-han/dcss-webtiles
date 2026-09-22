@@ -7,6 +7,9 @@ services:
     restart: unless-stopped
     # owner of ./data on the host (ubuntu user is 1000 on OCI Ubuntu images)
     user: "1000:1000"
+    environment:
+      # log real client IPs from Caddy's X-Real-IP
+      HTTP_XHEADERS: "true"
     volumes:
       - ./data:/data
     expose:

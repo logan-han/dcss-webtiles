@@ -17,6 +17,8 @@ write_files:
           container_name: dcss
           restart: unless-stopped
           user: "1000:1000"
+          environment:
+            HTTP_XHEADERS: "true"
           volumes:
             - ./data:/data
           expose:
@@ -43,7 +45,9 @@ write_files:
     content: |
       crawl.han.life {
           encode zstd gzip
-          reverse_proxy dcss:8080
+          reverse_proxy dcss:8080 {
+              header_up X-Real-IP {remote_host}
+          }
       }
 
 runcmd:

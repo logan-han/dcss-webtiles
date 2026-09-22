@@ -52,7 +52,9 @@ RUN pip install --no-cache-dir -r webserver/requirements/base.py3.txt
 COPY server/patches/ /tmp/patches/
 RUN for p in /tmp/patches/*.patch; do patch -p1 < "$p"; done && rm -rf /tmp/patches
 COPY --from=hd /work/out/ ./webserver/game_data/static/
-COPY server/config.yml ./webserver/config.yml
+# webtiles only reads webserver/config.yml; it links to /tmp so entrypoint.sh can add settings as any uid
+COPY server/config.yml /crawl/config.yml
+RUN ln -s /tmp/webtiles-config.yml webserver/config.yml
 RUN rm -f webserver/games.d/*.yaml webserver/games.d/*.yml
 COPY server/games.d/ ./webserver/games.d/
 COPY server/init-player.sh server/entrypoint.sh /crawl/
