@@ -49,6 +49,8 @@ jobs:
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          # provenance embeds the push event payload, including the pusher's account email
+          provenance: false
       - run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
