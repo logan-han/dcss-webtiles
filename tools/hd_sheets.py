@@ -27,8 +27,12 @@ TILE_RE = re.compile(r"\{w: (-?\d+), h: (-?\d+), ox: (-?\d+), oy: (-?\d+), sx: (
 
 
 def regions(tileinfo_js: Path) -> list[tuple[int, int, int, int]]:
+    text = tileinfo_js.read_text()
+    matches = list(TILE_RE.finditer(text))
+    if not matches or len(matches) != text.count("{w:"):
+        sys.exit(f"{tileinfo_js.name}: TILE_RE matched {len(matches)} of {text.count('{w:')} tile entries; has the format changed?")
     seen, out = set(), []
-    for m in TILE_RE.finditer(tileinfo_js.read_text()):
+    for m in matches:
         _, _, _, _, sx, sy, ex, ey = (int(v) for v in m.groups())
         if ex <= sx or ey <= sy:
             continue
@@ -133,8 +137,9 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         for name in args.sheets:
             done += process_sheet(static, out, name, args.scale, args.filter, Path(tmp))
-    if done == 0:
-        sys.exit("no sheets processed")
+    # the game.html patch switches every sheet to -2x on high-DPI screens, so a skipped sheet is a build error
+    if done != len(args.sheets):
+        sys.exit(f"only {done} of {len(args.sheets)} sheets processed")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,29 @@
+--- a/webserver/webtiles/game_data_handler.py
++++ b/webserver/webtiles/game_data_handler.py
+@@ -29,8 +29,13 @@
+         version, url_path = url_path.split("/", 1)
+         if version not in GameDataHandler._client_paths:
+             raise tornado.web.HTTPError(404)
+-        return super(GameDataHandler, self).parse_url_path(
+-                        GameDataHandler._client_paths[version] + "/" + url_path)
++        # the handler's root is "/", so keep the resolved path inside the client
++        # directory; otherwise ../ (or %2e%2e%2f) reads any file, e.g. passwd.db3
++        base = GameDataHandler._client_paths[version]
++        path = os.path.normpath(os.path.join(base, url_path))
++        if os.path.commonpath([base, path]) != base:
++            raise tornado.web.HTTPError(404)
++        return super(GameDataHandler, self).parse_url_path(path)
+ 
+     def set_extra_headers(self, path):
+         if config.get('game_data_no_cache'):
+@@ -38,6 +43,10 @@
+                             "no-cache, no-store, must-revalidate")
+             self.set_header("Pragma", "no-cache")
+             self.set_header("Expires", "0")
++        else:
++            # the /gamedata URL is the same for every image build, so make
++            # browsers revalidate (a cheap 304) instead of guessing freshness
++            self.set_header("Cache-Control", "no-cache")
+ 
+     _client_paths = {} # type: Dict[str, str]
+ 

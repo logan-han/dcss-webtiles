@@ -1,6 +1,6 @@
---- a/webserver/game_data/templates/game.html	2026-09-21 14:01:13
-+++ b/webserver/game_data/templates/game.html	2026-09-21 14:13:41
-@@ -487,4 +487,18 @@
+--- a/webserver/game_data/templates/game.html
++++ b/webserver/game_data/templates/game.html
+@@ -487,4 +487,24 @@
    <img id="player" src="/gamedata/{{ version }}/player.png" />
    <img id="icons" src="/gamedata/{{ version }}/icons.png" />
    <img id="gui" src="/gamedata/{{ version }}/gui.png" />
@@ -13,6 +13,12 @@
 +      for (var i = 0; i < ids.length; i++) {
 +        var img = document.getElementById(ids[i]);
 +        if (!img) continue;
++        // a 2x sheet that fails to load would break drawing; fall back to the 1x one
++        img.onerror = function () {
++          this.onerror = null;
++          this.removeAttribute("data-sheet-scale");
++          this.src = this.src.replace(/-2x\.png$/, ".png");
++        };
 +        img.setAttribute("data-sheet-scale", "2");
 +        img.src = img.src.replace(/\.png$/, "-2x.png");
 +      }
