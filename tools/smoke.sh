@@ -17,7 +17,7 @@ cleanup() {
 trap cleanup EXIT
 # skip character selection so the game gets far enough to have a save file (init-player.sh keeps an existing rc)
 mkdir "$DATA/rcs" && printf 'species = Human\nbackground = Monk\nweapon = unarmed\n' > "$DATA/rcs/smoke.rc"
-# never uid 1000, so a write under /crawl (owned by crawl) would show up as a failure
+# as the NAS uid when root, otherwise as the caller; with the read-only root any write outside /data and /tmp fails
 if [ "$(id -u)" = 0 ]; then RUNAS=1026:100; chown -R "$RUNAS" "$DATA"; else RUNAS="$(id -u):$(id -g)"; fi
 
 docker run -d --name "$NAME" --user "$RUNAS" --read-only --tmpfs /tmp --security-opt no-new-privileges \

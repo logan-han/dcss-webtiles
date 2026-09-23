@@ -19,7 +19,9 @@ for n in ("passwd", "settings"):
     dst.close()
     src.close()
 '; then
-  set -- "$@" --exclude=data/passwd.db3 --exclude=data/settings.db3 --transform='s,\.db3\.snap$,.db3,'
+  # a live -journal next to the snapshot would be rolled back into it on restore
+  set -- "$@" --exclude=data/passwd.db3 --exclude=data/settings.db3 --exclude='data/*.db3-journal' \
+    --transform='s,\.db3\.snap$,.db3,'
 else
   echo "warning: database snapshot failed, archiving the live files" >&2
 fi

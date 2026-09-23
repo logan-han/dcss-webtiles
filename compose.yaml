@@ -11,7 +11,7 @@ services:
     # uid:gid that owns the volume on the NAS (DSM users are usually 1026+ in group 100)
     user: "1026:100"
     # environment:
-    #   LOBBY_URL: "http://nas.local:8080/"   # completes `server.py password --reset` links
+    #   LOBBY_URL: "http://<nas>:<port>/"   # completes `webserver/wtutil.py password --reset` links
     restart: unless-stopped
     # the server writes only to /data and /tmp
     read_only: true

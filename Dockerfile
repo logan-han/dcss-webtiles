@@ -17,7 +17,7 @@ WORKDIR /src
 RUN curl -fsSL -o dcss.tar.xz \
       "https://github.com/crawl/crawl/releases/download/${DCSS_VERSION}/stone_soup-${DCSS_VERSION}.tar.xz" \
  && echo "${DCSS_SHA256}  dcss.tar.xz" | sha256sum -c - \
- && mkdir crawl && tar -xJf dcss.tar.xz -C crawl --strip-components=1 && rm dcss.tar.xz
+ && mkdir crawl && tar --no-same-owner -xJf dcss.tar.xz -C crawl --strip-components=1 && rm dcss.tar.xz
 # hand-fixed tiles, same relative paths as rltiles/ (empty by default); each one must replace an existing tile
 COPY tools/verify_tiles.py /src/
 COPY tiles/overrides/ /src/overrides/
@@ -36,11 +36,12 @@ RUN python3 util/status-icon-sizes-gen.py rltiles/icon-sizes.txt \
 FROM build AS web
 COPY server/patches/ /tmp/patches/
 # Every patch must apply exactly: no fuzz, no already-applied hunks, no .orig files left in the served tree.
+# (Keep the ;s: set -e does not apply inside a loop that is followed by &&.)
 # dat/tiles holds the 1x sheets and title art for local tiles, which a WEBTILES binary never reads.
 # webtiles only reads webserver/config.yml; it links to /tmp so entrypoint.sh can add settings as any uid.
-RUN set -e; for p in /tmp/patches/*.patch; do patch -p1 --forward --batch --fuzz=0 --no-backup-if-mismatch < "$p"; done \
- && rm -rf /tmp/patches dat/tiles webserver/games.d/*.yaml webserver/games.d/*.yml \
- && ln -s /tmp/webtiles-config.yml webserver/config.yml
+RUN set -e; for p in /tmp/patches/*.patch; do patch -p1 --forward --batch --fuzz=0 --no-backup-if-mismatch < "$p"; done; \
+    rm -rf /tmp/patches dat/tiles webserver/games.d/*.yaml webserver/games.d/*.yml; \
+    ln -s /tmp/webtiles-config.yml webserver/config.yml
 
 # ---------- hd: 2x tile sheets (xBR) for high-DPI screens ----------
 FROM python:3.12-slim-bookworm AS hd
@@ -63,12 +64,12 @@ ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libncursesw6 liblua5.4-0 libsqlite3-0 zlib1g \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --system --uid 1000 --create-home --home-dir /crawl crawl \
+ && useradd --system --uid 1000 --no-create-home --home-dir /crawl crawl \
  && install -d -o crawl -g crawl /data
 WORKDIR /crawl/source
 COPY server/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt
-# everything below is root-owned and read-only to the server; all state lives in /data
+# everything below (and /crawl itself) is root-owned and read-only to the server; all state lives in /data
 COPY --from=build /src/crawl/source/crawl ./crawl
 COPY --from=web /src/crawl/source/dat ./dat
 COPY --from=web /src/crawl/source/webserver ./webserver

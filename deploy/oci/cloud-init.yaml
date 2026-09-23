@@ -103,7 +103,9 @@ write_files:
           dst.close()
           src.close()
       '; then
-        set -- "$@" --exclude=data/passwd.db3 --exclude=data/settings.db3 --transform='s,\.db3\.snap$,.db3,'
+        # a live -journal next to the snapshot would be rolled back into it on restore
+        set -- "$@" --exclude=data/passwd.db3 --exclude=data/settings.db3 --exclude='data/*.db3-journal' \
+          --transform='s,\.db3\.snap$,.db3,'
       else
         echo "warning: database snapshot failed, archiving the live files" >&2
       fi
@@ -120,7 +122,8 @@ write_files:
   - path: /etc/cron.d/dcss-backup
     permissions: "0644"
     content: |
-      # 18:17 UTC = 04:17 AEST / 05:17 AEDT. To get alerted on a missed night, add a line like
+      # 18:17 UTC = 04:17 AEST / 05:17 AEDT. To get alerted on a missed night, uncomment this with your check's URL;
+      # cron only passes it to jobs below it.
       # HC_PING_URL=https://hc-ping.com/<uuid>
       17 18 * * * root /opt/dcss/backup.sh >>/var/log/dcss-backup.log 2>&1
 

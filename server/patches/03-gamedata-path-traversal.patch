@@ -1,8 +1,11 @@
 --- a/webserver/webtiles/game_data_handler.py
 +++ b/webserver/webtiles/game_data_handler.py
-@@ -29,8 +29,13 @@
+@@ -27,10 +27,15 @@
+         # the path should already match "([0-9a-f]*\/.*)", from server.py
+         import sys
          version, url_path = url_path.split("/", 1)
-         if version not in GameDataHandler._client_paths:
+-        if version not in GameDataHandler._client_paths:
++        if version not in GameDataHandler._client_paths or "\0" in url_path:
              raise tornado.web.HTTPError(404)
 -        return super(GameDataHandler, self).parse_url_path(
 -                        GameDataHandler._client_paths[version] + "/" + url_path)

@@ -9,9 +9,10 @@ on:
 permissions:
   contents: read
 
-# One publish at a time, so :latest ends up on the newest push; a newer PR push cancels the older run.
+# Main pushes publish one at a time, so :latest ends up on the newest push (a newer pending run replaces an
+# older one). Each tag gets its own group so it is never dropped; a newer PR push cancels the older run.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || 'publish' }}
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.ref) || github.ref_type == 'tag' && format('tag-{0}', github.ref) || 'publish' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:

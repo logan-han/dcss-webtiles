@@ -10,10 +10,13 @@
 5. Backups: the one-time OCI setup and the NAS key below.
 
 cloud-init only runs when the instance is created. To bring an existing VM up to date with this directory:
-`scp compose.yaml Caddyfile backup.sh ubuntu@<ip>:/tmp/ && ssh ubuntu@<ip> 'sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/dcss/ && sudo install -m 755 /tmp/backup.sh /opt/dcss/ && cd /opt/dcss && docker compose up -d'`.
+`scp compose.yaml Caddyfile backup.sh ubuntu@<ip>:/tmp/ && ssh ubuntu@<ip> 'sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/dcss/ && sudo install -m 755 /tmp/backup.sh /opt/dcss/ && cd /opt/dcss && docker compose up -d && docker compose restart caddy'`
+(the restart makes Caddy read the new Caddyfile, which `up -d` alone doesn't). A VM set up before cloud-init
+installed the backup keeps its hand-made cron entry and OCI CLI; check the entry runs `/opt/dcss/backup.sh` and
+that `/opt/oci/bin/oci` exists, or copy the cron file from `cloud-init.yaml`.
 
 Updates: `cd /opt/dcss && docker compose pull && docker compose up -d && docker image prune -f`. Running games are
-saved when the container stops. Every CI build is also pushed as `sha-<commit>`: to pin or roll back, put
+saved when the container stops. Every published main build is also tagged `sha-<commit>`: to pin or roll back, put
 `DCSS_TAG=sha-<commit>` in `/opt/dcss/.env` and run `docker compose up -d`; delete the line to follow `latest` again.
 
 Admin: `docker exec dcss python3 webserver/wtutil.py password --reset <user>` prints a password reset link, and
@@ -28,12 +31,15 @@ removes that rule.
 - In-cloud: `backup.sh` runs nightly from `/etc/cron.d/dcss-backup` (18:17 UTC = 04:17 AEST / 05:17 AEDT, log in
   `/var/log/dcss-backup.log`) and puts a tarball of `/opt/dcss/data` into the Always Free Object Storage bucket
   `crawl-backup` (namespace `axnnb2qvhvxc`), authenticated as the instance. The account and settings databases are
-  copied with SQLite's online backup, so they are consistent even while people play. Set `HC_PING_URL` in the cron
-  file (e.g. a free healthchecks.io check) to get an alert when a night is missed.
-  One-time setup, not in cloud-init: dynamic group `crawl-vm` with a matching rule on the compartment
-  (`ALL {instance.compartment.id = '<compartment ocid>'}`, so a replacement instance still matches), policy
-  `crawl-backup` with `Allow dynamic-group crawl-vm to manage objects in compartment <name> where
-  target.bucket.name='crawl-backup'`, and a lifecycle rule on the bucket that deletes objects after 30 days.
+  copied with SQLite's online backup, so they are consistent even while people play. Uncomment `HC_PING_URL` in
+  the cron file (it must stay above the job line; e.g. a free healthchecks.io check) to get an alert when a night
+  is missed.
+  One-time setup, not in cloud-init: a private bucket `crawl-backup`; dynamic group `crawl-vm` with a matching rule
+  on the compartment (`ALL {instance.compartment.id = '<compartment ocid>'}`, so a replacement instance still
+  matches); policy `crawl-backup` with `Allow dynamic-group crawl-vm to manage objects in compartment <name> where
+  target.bucket.name='crawl-backup'` and, for lifecycle rules, `Allow service objectstorage-<region, e.g.
+  ap-melbourne-1> to manage object-family in compartment <name>`; then a lifecycle rule on the bucket that deletes
+  objects after 30 days.
 - Restore (on the VM):
 
   ```sh
