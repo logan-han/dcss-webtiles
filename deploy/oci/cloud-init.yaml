@@ -1,28 +1,53 @@
 #cloud-config
 # Paste into "Show advanced options > Management > Cloud-init script" when creating the OCI instance
 # (Ubuntu 24.04, Ampere A1). Also open TCP 80/443 and UDP 443 in the subnet's security list.
+# The files under /opt/dcss are copies of deploy/oci/*; CI (tools/check_cloud_init.py) fails if they drift.
+# Still manual, see README.md: the OCI IAM/bucket setup and the NAS's read-only rsync key.
 package_update: true
 package_upgrade: true
 packages:
   - docker.io
   - docker-compose-v2
+  - python3-venv
 
 write_files:
   - path: /opt/dcss/compose.yaml
     permissions: "0644"
     content: |
+      # Oracle Cloud (or any VM) deployment: the game container plus Caddy for automatic HTTPS.
+      # Caddy answers on 80/443, gets the Let's Encrypt certificate itself and proxies WebSockets.
+      # DCSS_TAG (e.g. sha-abc1234 in /opt/dcss/.env) pins or rolls back the game image; unset means latest.
+
+      # Docker's default json-file log has no size limit, and a public server logs every scanner's 404
+      x-logging: &logging
+        driver: local
+        options:
+          max-size: "10m"
+          max-file: "3"
+
       services:
         dcss:
-          image: loganhan123/dcss-webtiles:latest
+          image: loganhan123/dcss-webtiles:${DCSS_TAG:-latest}
           container_name: dcss
           restart: unless-stopped
+          # owner of ./data on the host (ubuntu user is 1000 on OCI Ubuntu images)
           user: "1000:1000"
           environment:
+            # log real client IPs from Caddy's X-Real-IP
             HTTP_XHEADERS: "true"
+            LOBBY_URL: "https://crawl.han.life/"
           volumes:
             - ./data:/data
           expose:
             - "8080"
+          # the server writes only to /data and /tmp
+          read_only: true
+          tmpfs:
+            - /tmp
+          security_opt:
+            - no-new-privileges:true
+          logging: *logging
+
         caddy:
           image: caddy:2
           container_name: caddy
@@ -37,18 +62,67 @@ write_files:
             - caddy_config:/config
           depends_on:
             - dcss
+          logging: *logging
+
       volumes:
         caddy_data:
         caddy_config:
   - path: /opt/dcss/Caddyfile
     permissions: "0644"
     content: |
+      # Replace the hostname if you use another one. Caddy issues and renews the certificate.
       crawl.han.life {
           encode zstd gzip
+          header Strict-Transport-Security "max-age=31536000"
           reverse_proxy dcss:8080 {
+              # overwrite any client-sent value; webtiles trusts it with HTTP_XHEADERS=true
               header_up X-Real-IP {remote_host}
           }
       }
+  - path: /opt/dcss/backup.sh
+    permissions: "0755"
+    content: |
+      #!/bin/sh
+      # Nightly backup of /opt/dcss/data to the OCI bucket crawl-backup using the instance's own identity
+      # (dynamic group crawl-vm; no API keys on the VM). Objects expire after 30 days via the bucket lifecycle rule.
+      # Set HC_PING_URL (e.g. a healthchecks.io check) in the cron file to get told when a night's backup is missing.
+      set -eu
+      DATA=/opt/dcss/data
+      NAME="dcss-data-$(date -u +%Y-%m-%dT%H%M).tgz"
+      TMP=$(mktemp -d)
+      trap 'rm -rf "$TMP"; rm -f "$DATA"/*.db3.snap' EXIT
+
+      # Consistent copies of the account and settings databases via SQLite's online backup API, taken in the running
+      # container. If that fails (e.g. the container is down) the raw files are archived instead.
+      set -- --exclude=data/sockets --exclude='data/saves/cache.*'
+      if docker exec dcss python3 -c '
+      import sqlite3
+      for n in ("passwd", "settings"):
+          src, dst = sqlite3.connect(f"/data/{n}.db3"), sqlite3.connect(f"/data/{n}.db3.snap")
+          src.backup(dst)
+          dst.close()
+          src.close()
+      '; then
+        set -- "$@" --exclude=data/passwd.db3 --exclude=data/settings.db3 --transform='s,\.db3\.snap$,.db3,'
+      else
+        echo "warning: database snapshot failed, archiving the live files" >&2
+      fi
+
+      # tar exits 1 when a file changes while it is read (a save during play); the archive is still usable
+      rc=0
+      tar czf "$TMP/$NAME" --warning=no-file-changed -C /opt/dcss "$@" data || rc=$?
+      [ "$rc" -le 1 ] || exit "$rc"
+
+      /opt/oci/bin/oci os object put --auth instance_principal --bucket-name crawl-backup \
+        --name "$NAME" --file "$TMP/$NAME" --force >/dev/null
+      echo "$(date -u +%FT%TZ) backup ok $NAME ($(du -h "$TMP/$NAME" | cut -f1))"
+      if [ -n "${HC_PING_URL:-}" ]; then curl -fsS -m 10 --retry 3 -o /dev/null "$HC_PING_URL" || true; fi
+  - path: /etc/cron.d/dcss-backup
+    permissions: "0644"
+    content: |
+      # 18:17 UTC = 04:17 AEST / 05:17 AEDT. To get alerted on a missed night, add a line like
+      # HC_PING_URL=https://hc-ping.com/<uuid>
+      17 18 * * * root /opt/dcss/backup.sh >>/var/log/dcss-backup.log 2>&1
 
 runcmd:
   # OCI Ubuntu images ship iptables rules that only allow SSH; open the web ports and persist them
@@ -61,3 +135,5 @@ runcmd:
   - usermod -aG docker ubuntu
   - systemctl enable --now docker
   - cd /opt/dcss && docker compose pull && docker compose up -d
+  # OCI CLI for backup.sh (instance-principal auth, so no API keys)
+  - python3 -m venv /opt/oci && /opt/oci/bin/pip install --quiet oci-cli

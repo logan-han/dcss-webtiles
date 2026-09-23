@@ -2,7 +2,7 @@
 # Point crawl.han.life at the VM. han.life is hosted in Lightsail DNS (us-east-1), not Route 53.
 #   deploy/oci/dns.sh <public-ip>
 set -eu
-IP="$1"; DOMAIN=han.life; NAME="crawl.$DOMAIN"
+IP="${1:?usage: dns.sh <public-ip>}"; DOMAIN=han.life; NAME="crawl.$DOMAIN"
 aws lightsail get-domain --region us-east-1 --domain-name "$DOMAIN" \
   --query "domain.domainEntries[?name=='$NAME'].join('', ['name=', name, ',target=', target, ',type=', type])" --output text |
 tr '\t' '\n' | sed '/^$/d' |

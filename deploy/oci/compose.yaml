@@ -1,8 +1,17 @@
 # Oracle Cloud (or any VM) deployment: the game container plus Caddy for automatic HTTPS.
 # Caddy answers on 80/443, gets the Let's Encrypt certificate itself and proxies WebSockets.
+# DCSS_TAG (e.g. sha-abc1234 in /opt/dcss/.env) pins or rolls back the game image; unset means latest.
+
+# Docker's default json-file log has no size limit, and a public server logs every scanner's 404
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   dcss:
-    image: loganhan123/dcss-webtiles:latest
+    image: loganhan123/dcss-webtiles:${DCSS_TAG:-latest}
     container_name: dcss
     restart: unless-stopped
     # owner of ./data on the host (ubuntu user is 1000 on OCI Ubuntu images)
@@ -10,10 +19,18 @@ services:
     environment:
       # log real client IPs from Caddy's X-Real-IP
       HTTP_XHEADERS: "true"
+      LOBBY_URL: "https://crawl.han.life/"
     volumes:
       - ./data:/data
     expose:
       - "8080"
+    # the server writes only to /data and /tmp
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging
 
   caddy:
     image: caddy:2
@@ -29,6 +46,7 @@ services:
       - caddy_config:/config
     depends_on:
       - dcss
+    logging: *logging
 
 volumes:
   caddy_data:
