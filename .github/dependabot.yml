@@ -1,0 +1,14 @@
+# Weekly PRs for the Actions used by CI and the webserver's Python deps. Each PR builds and smoke-tests the image.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /server
+    schedule:
+      interval: weekly

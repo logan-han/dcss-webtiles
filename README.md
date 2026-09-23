@@ -5,11 +5,13 @@ with 2x xBR tile sheets for high-DPI screens.
 
 - `Dockerfile` builds DCSS (`WEBTILES=y USE_DGAMELAUNCH=y`), generates the 2x sheets and ships
   the webtiles server on port 8080 with all state under `/data`.
-- `server/` holds the webtiles overrides, game list, player init and the two client patches.
+- `server/` holds the webtiles overrides, game list, player init and the patches: two client ones for the 2x
+  sheets and one that stops `/gamedata` path traversal (upstream serves any file, `passwd.db3` included).
 - `compose.yaml` is the Container Manager project for the NAS; the image is published to Docker Hub as `loganhan123/dcss-webtiles` by CI.
-- `tools/hd_sheets.py` makes the 2x sheets; `pilot/` holds the tile experiments.
+- `tools/hd_sheets.py` makes the 2x sheets; `tools/smoke.sh <image>` starts an image, plays a game and checks
+  the patches (CI runs it on every build, PRs included); `pilot/` holds the tile experiments.
 
-Local run: `docker build -t dcss-webtiles . && docker run --rm -p 8080:8080 -v $PWD/data:/data dcss-webtiles`
+Local run: `docker build -t dcss-webtiles . && mkdir -p data && docker run --rm --user "$(id -u):$(id -g)" -p 8080:8080 -v "$PWD/data:/data" dcss-webtiles`
 
 ## Hosting options
 
