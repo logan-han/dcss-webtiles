@@ -1,4 +1,4 @@
 # Runtime Python deps for webserver/. Upstream's requirements/base.py3.txt pins tornado 6.4.2, which predates
 # several unauthenticated request-parsing DoS fixes; this is the same set with a current tornado.
-pyyaml==6.0.1
+pyyaml==6.0.3
 tornado==6.5.10
