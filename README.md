@@ -17,6 +17,6 @@ Local run: `docker build -t dcss-webtiles . && mkdir -p data && docker run --rm 
 
 - NAS: `compose.yaml` (Container Manager), port 7777 on the LAN.
 - Oracle Cloud Always Free (or any VM): `deploy/oci/` has the compose file with Caddy for automatic HTTPS, a cloud-init
-  script for the instance and a Lightsail DNS helper for `crawl.han.life`.
+  script for the instance, a Lightsail DNS helper for `crawl.han.life` and a New Relic agent installer.
 
 Images on Docker Hub are multi-arch (amd64 for the NAS, arm64 for Ampere A1 and Apple Silicon).

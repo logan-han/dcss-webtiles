@@ -8,9 +8,10 @@
 4. Check: `ssh ubuntu@<ip> 'cd /opt/dcss && docker compose ps && docker compose logs --tail 20'`, then open
    https://crawl.han.life and register the first account.
 5. Backups: the one-time OCI setup and the NAS key below.
+6. Monitoring: `sudo /opt/dcss/newrelic.sh <license key>` installs the New Relic agent (see Monitoring below).
 
 cloud-init only runs when the instance is created. To bring an existing VM up to date with this directory:
-`scp compose.yaml Caddyfile backup.sh ubuntu@<ip>:/tmp/ && ssh ubuntu@<ip> 'sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/dcss/ && sudo install -m 755 /tmp/backup.sh /opt/dcss/ && cd /opt/dcss && docker compose up -d && docker compose restart caddy'`
+`scp compose.yaml Caddyfile backup.sh newrelic.sh ubuntu@<ip>:/tmp/ && ssh ubuntu@<ip> 'sudo install -m 644 /tmp/compose.yaml /tmp/Caddyfile /opt/dcss/ && sudo install -m 755 /tmp/backup.sh /tmp/newrelic.sh /opt/dcss/ && cd /opt/dcss && docker compose up -d && docker compose restart caddy'`
 (the restart makes Caddy read the new Caddyfile, which `up -d` alone doesn't). A VM set up before cloud-init
 installed the backup keeps its hand-made cron entry and OCI CLI; check the entry runs `/opt/dcss/backup.sh` and
 that `/opt/oci/bin/oci` exists, or copy the cron file from `cloud-init.yaml`.
@@ -60,3 +61,18 @@ removes that rule.
   (rrsync roots the path at `/opt/dcss/data`, hence `:/`). `--delete` makes this a mirror: a wiped or damaged data
   directory on the VM reaches the NAS on the next run, so keep history on the NAS side, e.g. snapshots of the share
   (Snapshot Replication, Btrfs volumes only).
+
+## Monitoring
+
+- `newrelic.sh <license key>` installs the New Relic infrastructure agent from New Relic's apt repository and writes
+  its config: host, process and Docker container metrics plus the syslog, auth and backup logs. Running it again
+  rewrites the config and restarts the agent. The key is the `crawl-vm` INGEST - LICENSE key under
+  one.newrelic.com > Administration > API keys (account 1047501) and lives only in `/etc/newrelic-infra.yml` on the
+  VM, so a rebuilt VM needs the script run once by hand; cloud-init only puts it in place.
+- Data: one.newrelic.com > Infrastructure > Hosts > `crawl` (the Containers tab lists dcss and caddy) and Logs
+  filtered by `hostname:crawl`. Container logs are not forwarded: the compose file uses Docker's `local` log driver,
+  which the agent cannot tail. Switching it to `json-file` with the same size caps and adding
+  `/var/lib/docker/containers/*/*.log` to `/etc/newrelic-infra/logging.d/dcss.yml` would add them.
+- Updates: unattended-upgrades only covers Ubuntu's repositories, so
+  `sudo apt-get update && sudo apt-get install --only-upgrade newrelic-infra` when a newer agent is wanted.
+  `journalctl -u newrelic-infra` shows the agent's own log.

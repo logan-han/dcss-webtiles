@@ -17,6 +17,7 @@ COPIES = {
     "/opt/dcss/compose.yaml": Path("deploy/oci/compose.yaml"),
     "/opt/dcss/Caddyfile": Path("deploy/oci/Caddyfile"),
     "/opt/dcss/backup.sh": Path("deploy/oci/backup.sh"),
+    "/opt/dcss/newrelic.sh": Path("deploy/oci/newrelic.sh"),
 }
 
 
