@@ -73,6 +73,10 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.
 COPY --from=build /src/crawl/source/crawl ./crawl
 COPY --from=web /src/crawl/source/dat ./dat
 COPY --from=web /src/crawl/source/webserver ./webserver
+# lobby banner: webtiles ships banner.html as the customisation point, so no patch is needed; it picks one
+# of the scenes in static/banners/ per visit
+COPY server/templates/banner.html ./webserver/templates/banner.html
+COPY server/static/banners/ ./webserver/static/banners/
 COPY --from=build /src/crawl/settings /crawl/settings
 COPY --from=build /src/crawl/docs /crawl/docs
 COPY --from=hd /work/out/ ./webserver/game_data/static/

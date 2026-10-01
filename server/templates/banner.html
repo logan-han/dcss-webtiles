@@ -1,0 +1,15 @@
+{% import os %}
+{% import random %}
+{% import webtiles.config %}
+{% set banner_dir = os.path.join(webtiles.config.get("static_path"), "banners") %}
+{% set banners = sorted(f for f in os.listdir(banner_dir) if f.endswith(".png")) if os.path.isdir(banner_dir) else [] %}
+<div style="clear: both; text-align: center; margin: 4px 0 12px;">
+{% if banners %}
+  <img src="{{ static_url("banners/" + random.choice(banners)) }}" alt="" width="512" height="128"
+       style="max-width: 100%; height: auto; image-rendering: pixelated; display: block; margin: 0 auto 6px;">
+{% end %}
+  Welcome to WebTiles!
+{% if username %}
+  <br>Hello, {{ username }}!
+{% end %}
+</div>

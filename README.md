@@ -10,6 +10,10 @@ with 2x xBR tile sheets for high-DPI screens.
 - `compose.yaml` is the Container Manager project for the NAS; the image is published to Docker Hub as `loganhan123/dcss-webtiles` by CI.
 - `tools/hd_sheets.py` makes the 2x sheets; `tools/smoke.sh <image>` starts an image, plays a game and checks
   the patches (CI runs it on every build, PRs included); `pilot/` holds the tile experiments.
+- `tools/pixellab.py` makes pixel art through PixelLab's MCP endpoint under a generation cap; it drew the eleven
+  branch scenes in `server/static/banners/`, one of which `server/templates/banner.html` shows above the lobby's
+  welcome line on each visit (the game's own title screen is random too). Its correct-pixelart was also run over
+  the xBR sheets and only added noise or blur (`pilot/pixellab_correct_*.png`), so the sheets stay plain xBR.
 
 Local run: `docker build -t dcss-webtiles . && mkdir -p data && docker run --rm --user "$(id -u):$(id -g)" -p 8080:8080 -v "$PWD/data:/data" dcss-webtiles`
 
